@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Real-Time</title>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script> <!-- Biblioteca Socket.io -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .input-group {
+            margin-bottom: 10px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            font-size: 1rem;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        button {
+            padding: 10px;
+            font-size: 1rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #chatContainer {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .messages {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            margin-bottom: 10px;
+        }
+
+        .message {
+            padding: 5px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: #f1f1f1;
+        }
+
+        .message.sent {
+            background-color: #d4edda;
+            align-self: flex-end;
+            text-align: right;
+        }
+
+        .message.received {
+            background-color: #cce5ff;
+            align-self: flex-start;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chat Real-Time</h1>
+
+        <div id="loginSection">
+            <div class="input-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" placeholder="Enter your username" />
+            </div>
+            <div class="input-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="Enter your password" />
+            </div>
+            <button id="loginButton">Login</button>
+        </div>
+
+        <div id="chatContainer">
+            <div id="usernameDisplay" style="font-weight: bold; color: #333; margin-bottom: 10px;"></div>
+            <div class="input-group">
+                <label for="toUsername">To (Username):</label>
+                <input type="text" id="toUsername" placeholder="Enter recipient's username" />
+            </div>
+            <div class="input-group">
+                <label for="messageInput">Message:</label>
+                <input type="text" id="messageInput" placeholder="Type your message..." />
+                <button id="sendButton">Send Message</button>
+            </div>
+            <div id="messages" class="messages"></div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io("http://192.168.3.9:8080", { autoConnect: false }); // Não conectar automaticamente
+        const loginButton = document.getElementById("loginButton");
+        const sendButton = document.getElementById("sendButton");
+        const usernameInput = document.getElementById("username");
+        const passwordInput = document.getElementById("password");
+        const messageInput = document.getElementById("messageInput");
+        const toUsernameInput = document.getElementById("toUsername");
+        const chatContainer = document.getElementById("chatContainer");
+        const messagesDiv = document.getElementById("messages");
+        const loginSection = document.getElementById("loginSection");
+
+        // Função para login do usuário (autenticação via API)
+        loginButton.addEventListener("click", async () => {
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+
+            if (!username || !password) {
+                alert("Por favor, insira nome de usuário e senha.");
+                return;
+            }
+
+            try {
+                const response = await fetch("http://192.168.3.9:8080/api/v1/auth/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Login bem-sucedido, conectar ao WebSocket
+                    const sessionId = data.sessionId; // Considerando que o backend retorna um sessionId
+                    socket.auth = { sessionId }; // Armazenar o sessionId no socket
+                    socket.connect(); // Conectar ao WebSocket
+                    loginSection.style.display = "none"; // Esconder a tela de login
+                    chatContainer.style.display = "block"; // Mostrar a tela de chat
+                } else {
+                    alert(data.message); // Exibir a mensagem de erro do backend
+                }
+            } catch (error) {
+                console.error("Erro no login:", error);
+                alert("Erro ao tentar fazer login.");
+            }
+        });
+
+
+        socket.on('connect', () => {
+            const sessionId = socket.auth.sessionId;
+            if (sessionId) {
+                socket.emit('login', sessionId);
+                const usernameDisplay = document.getElementById("usernameDisplay");
+                const username = usernameInput.value;
+                usernameDisplay.textContent = `Logado como ${username}`;
+            }
+        });
+
+        // Função para enviar mensagem
+        sendButton.addEventListener("click", () => {
+            const message = messageInput.value;
+            const toUsername = toUsernameInput.value; // Aqui estamos pegando o 'toUsername'
+
+            if (!toUsername) {
+                alert("Por favor, insira o nome de usuário para enviar a mensagem.");
+                return;
+            }
+
+            if (message) {
+                // Exibir a própria mensagem
+                const ownMessageElement = document.createElement("div");
+                ownMessageElement.textContent = `Você: ${message}`;
+                ownMessageElement.classList.add("message", "sent");
+                messagesDiv.appendChild(ownMessageElement);
+
+                socket.emit("send_message", toUsername, message); // Enviar mensagem para o 'toUsername'
+                messageInput.value = ''; // Limpar o campo de mensagem
+            }
+        });
+
+        // Receber mensagens do servidor
+        socket.on("receive_message", (message) => {
+            const messageElement = document.createElement("div");
+            messageElement.textContent = message;
+            messageElement.classList.add("message", "received");
+            messagesDiv.appendChild(messageElement);
+        });
+
+        // Receber erro de sessão ou outros erros
+        socket.on("error", (errorMessage) => {
+            alert(errorMessage);
+        });
+    </script>
+</body>
+</html>

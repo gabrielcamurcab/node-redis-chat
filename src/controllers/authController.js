@@ -45,7 +45,7 @@ const login = async (req, res) => {
 
         console.log(sessionId);
         
-        return res.status(200).json({ message: "Login bem sucedido!" });
+        return res.status(200).json({ message: "Login bem sucedido!", sessionId: sessionId });
     } catch (err) {
         return res.status(500).json({ message: 'Erro no servidor', error: err });
     }
