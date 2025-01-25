@@ -1,2 +1,2 @@
 # Node Redis Chat
-## Chat em real usando NodeJS, Redis e WebSocket
+## Chat em tempo real usando NodeJS, Redis e WebSocket
