@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlenght: 6
   },
+  sessionId: { type: String }
 });
 
 userSchema.pre("save", async function (next) {

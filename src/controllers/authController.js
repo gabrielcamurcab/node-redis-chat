@@ -38,6 +38,9 @@ const login = async (req, res) => {
         }
 
         const sessionId = `${username}:${Date.now()}`;
+        user.sessionId = sessionId;
+        await user.save();
+
         await redis.set(sessionId, JSON.stringify({ username }));
 
         console.log(sessionId);
