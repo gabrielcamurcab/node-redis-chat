@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import authRoutes from './routes/authRoutes.js';
+import mongoose from 'mongoose';
 
 dotenv.config();
 
@@ -17,6 +18,10 @@ const io = new Server(server, {
 })
 
 app.use(express.json());
+
+mongoose.connect(process.env.MONGODB_URI, {})
+    .then(() => console.log('Conectado ao mongodb'))
+    .catch((err) => console.error('Erro ao conectar ao mongodb', err));
 
 app.use('/api/v1/auth', authRoutes);
 
