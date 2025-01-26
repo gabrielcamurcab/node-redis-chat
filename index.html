@@ -134,7 +134,7 @@
     </div>
 
     <script>
-        const socket = io("http://192.168.3.9:8080", { autoConnect: false }); // Não conectar automaticamente
+        const socket = io("http://localhost:8080", { autoConnect: false }); // Não conectar automaticamente
         const loginButton = document.getElementById("loginButton");
         const sendButton = document.getElementById("sendButton");
         const usernameInput = document.getElementById("username");
@@ -144,17 +144,19 @@
         const chatContainer = document.getElementById("chatContainer");
         const messagesDiv = document.getElementById("messages");
         const loginSection = document.getElementById("loginSection");
-
+    
+        let currentRecipient = ''; // Para armazenar o usuário atual com quem estamos conversando
+    
         // Função para login do usuário (autenticação via API)
         loginButton.addEventListener("click", async () => {
             const username = usernameInput.value;
             const password = passwordInput.value;
-
+    
             if (!username || !password) {
                 alert("Por favor, insira nome de usuário e senha.");
                 return;
             }
-
+    
             try {
                 const response = await fetch("http://192.168.3.9:8080/api/v1/auth/login", {
                     method: "POST",
@@ -163,9 +165,9 @@
                     },
                     body: JSON.stringify({ username, password })
                 });
-
+    
                 const data = await response.json();
-
+    
                 if (response.ok) {
                     // Login bem-sucedido, conectar ao WebSocket
                     const sessionId = data.sessionId; // Considerando que o backend retorna um sessionId
@@ -181,8 +183,7 @@
                 alert("Erro ao tentar fazer login.");
             }
         });
-
-
+    
         socket.on('connect', () => {
             const sessionId = socket.auth.sessionId;
             if (sessionId) {
@@ -192,29 +193,29 @@
                 usernameDisplay.textContent = `Logado como ${username}`;
             }
         });
-
+    
         // Função para enviar mensagem
         sendButton.addEventListener("click", () => {
             const message = messageInput.value;
             const toUsername = toUsernameInput.value; // Aqui estamos pegando o 'toUsername'
-
+    
             if (!toUsername) {
                 alert("Por favor, insira o nome de usuário para enviar a mensagem.");
                 return;
             }
-
+    
             if (message) {
                 // Exibir a própria mensagem
                 const ownMessageElement = document.createElement("div");
                 ownMessageElement.textContent = `Você: ${message}`;
                 ownMessageElement.classList.add("message", "sent");
                 messagesDiv.appendChild(ownMessageElement);
-
+    
                 socket.emit("send_message", toUsername, message); // Enviar mensagem para o 'toUsername'
                 messageInput.value = ''; // Limpar o campo de mensagem
             }
         });
-
+    
         // Receber mensagens do servidor
         socket.on("receive_message", (message) => {
             const messageElement = document.createElement("div");
@@ -222,11 +223,36 @@
             messageElement.classList.add("message", "received");
             messagesDiv.appendChild(messageElement);
         });
-
+    
+        // Função para obter o histórico de mensagens
+        function getHistory(toUsername) {
+            socket.emit('get_history', toUsername); // Enviar solicitação para obter histórico
+        }
+    
+        // Exibir histórico quando um novo chat for iniciado
+        toUsernameInput.addEventListener("blur", () => {
+            const toUsername = toUsernameInput.value;
+            if (toUsername && toUsername !== currentRecipient) {
+                currentRecipient = toUsername;
+                messagesDiv.innerHTML = ''; // Limpar as mensagens anteriores
+                getHistory(toUsername); // Obter o histórico de mensagens
+            }
+        });
+    
+        // Receber o histórico de mensagens do servidor
+        socket.on('socket_history', (history) => {
+            history.forEach((msg) => {
+                const messageElement = document.createElement("div");
+                messageElement.textContent = `${msg.from}: ${msg.message}`;
+                messageElement.classList.add("message", "received");
+                messagesDiv.appendChild(messageElement);
+            });
+        });
+    
         // Receber erro de sessão ou outros erros
         socket.on("error", (errorMessage) => {
             alert(errorMessage);
         });
-    </script>
+    </script>    
 </body>
 </html>
