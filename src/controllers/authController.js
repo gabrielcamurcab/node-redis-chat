@@ -41,7 +41,7 @@ const login = async (req, res) => {
         user.sessionId = sessionId;
         await user.save();
 
-        await redis.set(sessionId, JSON.stringify({ username }));
+        await redis.set(sessionId, JSON.stringify({ username }), 'EX', 3600);
 
         console.log(sessionId);
         
