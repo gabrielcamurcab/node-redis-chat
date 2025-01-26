@@ -15,13 +15,13 @@
             height: 100vh;
             margin: 0;
         }
-
+    
         h1 {
             font-size: 2rem;
             color: #333;
             margin-bottom: 20px;
         }
-
+    
         .container {
             background-color: #ffffff;
             padding: 20px;
@@ -32,11 +32,11 @@
             flex-direction: column;
             justify-content: space-between;
         }
-
+    
         .input-group {
             margin-bottom: 10px;
         }
-
+    
         input {
             width: 100%;
             padding: 10px;
@@ -46,7 +46,7 @@
             border-radius: 5px;
             background-color: #f9f9f9;
         }
-
+    
         button {
             padding: 10px;
             font-size: 1rem;
@@ -57,20 +57,20 @@
             cursor: pointer;
             transition: background-color 0.3s;
         }
-
+    
         button:disabled {
             background-color: #ccc;
         }
-
+    
         button:hover {
             background-color: #45a049;
         }
-
+    
         #chatContainer {
             display: none;
             margin-top: 20px;
         }
-
+    
         .messages {
             max-height: 300px;
             overflow-y: auto;
@@ -80,27 +80,45 @@
             border-radius: 5px;
             background-color: #f9f9f9;
             margin-bottom: 10px;
+            display: flex;
+            flex-direction: column; /* Para garantir que as mensagens fiquem uma embaixo da outra */
+            gap: 10px; /* Espaço entre as mensagens */
         }
-
+    
         .message {
-            padding: 5px;
+            padding: 8px;
             margin-bottom: 10px;
-            border-radius: 5px;
+            border-radius: 12px;
             background-color: #f1f1f1;
+            word-wrap: break-word;
+            display: inline-block;
+            max-width: 70%;
         }
-
+    
         .message.sent {
             background-color: #d4edda;
             align-self: flex-end;
             text-align: right;
+            border-radius: 12px 12px 0 12px;
         }
-
+    
         .message.received {
             background-color: #cce5ff;
             align-self: flex-start;
             text-align: left;
+            border-radius: 12px 12px 12px 0;
+        }
+    
+        .message-history {
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: 15px;
+            padding: 8px;
+            border-radius: 10px;
+            background-color: #e9ecef;
         }
     </style>
+    
 </head>
 <body>
     <div class="container">
@@ -132,9 +150,8 @@
             <div id="messages" class="messages"></div>
         </div>
     </div>
-
     <script>
-        const socket = io("http://localhost:8080", { autoConnect: false }); // Não conectar automaticamente
+        const socket = io("http://localhost:8080", { autoConnect: false });
         const loginButton = document.getElementById("loginButton");
         const sendButton = document.getElementById("sendButton");
         const usernameInput = document.getElementById("username");
@@ -170,11 +187,11 @@
     
                 if (response.ok) {
                     // Login bem-sucedido, conectar ao WebSocket
-                    const sessionId = data.sessionId; // Considerando que o backend retorna um sessionId
-                    socket.auth = { sessionId }; // Armazenar o sessionId no socket
-                    socket.connect(); // Conectar ao WebSocket
-                    loginSection.style.display = "none"; // Esconder a tela de login
-                    chatContainer.style.display = "block"; // Mostrar a tela de chat
+                    const sessionId = data.sessionId;
+                    socket.auth = { sessionId };
+                    socket.connect();
+                    loginSection.style.display = "none";
+                    chatContainer.style.display = "block";
                 } else {
                     alert(data.message); // Exibir a mensagem de erro do backend
                 }
@@ -244,7 +261,8 @@
             history.forEach((msg) => {
                 const messageElement = document.createElement("div");
                 messageElement.textContent = `${msg.from}: ${msg.message}`;
-                messageElement.classList.add("message", "received");
+                messageElement.classList.add("message", msg.from === usernameInput.value ? "sent" : "received");
+                messageElement.classList.add("message-history");
                 messagesDiv.appendChild(messageElement);
             });
         });
